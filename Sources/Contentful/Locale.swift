@@ -13,14 +13,15 @@ public typealias LocaleCode = String
 
 extension Locale: EndpointAccessible {
 
-    static let endpoint = Endpoint.locales
+    public static let endpoint = Endpoint.locales
 }
 
 /// A Locale represents possible translations for Entry Fields
-public class Locale: Resource, Decodable {
+public class Locale: Resource, FlatResource, Decodable {
 
     /// System fields.
     public let sys: Sys
+
     /// Linked list accessor for going to the next fallback locale
     public let fallbackLocaleCode: LocaleCode?
 
@@ -74,6 +75,10 @@ public class LocalizationContext {
     /// An ordered collection of locales representing the fallback chain.
     public let locales: [LocaleCode: Locale]
 
+    /// The currently selected locale on the context which should be the starting locale
+    /// for walking the fallback chain when deserializing muli-locale format resources.
+    internal var currentLocale: Locale
+
     /// The default locale of the space.
     public let `default`: Locale
 
@@ -85,18 +90,20 @@ public class LocalizationContext {
         }
         self.`default` = defaultLocale
 
+        self.currentLocale = defaultLocale
         var localeMap = [LocaleCode: Locale]()
         locales.forEach { localeMap[$0.code] = $0 }
         self.locales = localeMap
     }
+
 }
 
 internal struct Localization {
 
     // Walks down the fallback chain and returns the field values for the specified locale.
     internal static func fields(forLocale locale: Locale?,
-                       localizableFields: [FieldName: [LocaleCode: Any]],
-                       localizationContext: LocalizationContext) -> [FieldName: Any] {
+                                localizableFields: [FieldName: [LocaleCode: Any]],
+                                localizationContext: LocalizationContext) -> [FieldName: Any] {
 
         // If no locale passed in, use the default.
         let originalLocale = locale ?? localizationContext.default
